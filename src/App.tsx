@@ -1,7 +1,13 @@
-import { Canvas } from "./features/canvas/Canvas";
+import { ReactElement } from "react";
+import { Page } from "features/page/Page";
+import { Canvas } from "features/canvas/Canvas";
 
-function App() {
-  return <Canvas />;
+function App(): ReactElement {
+  return (
+    <Page>
+      <Canvas />
+    </Page>
+  );
 }
 
 export default App;
