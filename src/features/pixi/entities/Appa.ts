@@ -1,41 +1,49 @@
+import type { Entity } from "./Entity";
+import type { UUID } from "utils/types";
 import * as PIXI from "pixi.js";
 import { store } from "app/store";
 import { incrementClicks } from "../pixiSlice";
+import { AudioManager } from "../helpers/AudioManager";
 import cloneDeep from "lodash/cloneDeep";
-import type { Entity } from "./Entity";
+import { EmptyObject } from "@reduxjs/toolkit";
 
-type AppaState = {
-  audioPlaying: Record<AudioTypes, HTMLAudioElement[]>;
-};
+type AppaState = EmptyObject;
 
 export enum AudioTypes {
-  roar = "roar",
-  meow = "meow",
+  roar = "Appa-roar",
+  meow = "Appa-meow",
+  test = "Appa-test",
 }
-
-export enum AudioFiles {
-  roar = "t-rex-roar.mp3",
-  meow = "meow.mp3",
-}
-
 enum SpriteFiles {
   appa = "appa-icon.png",
 }
+const audioTypeFileMap = {
+  [AudioTypes.meow]: 'meow.mp3',
+  [AudioTypes.roar]: 't-rex-roar.mp3',
+  [AudioTypes.test]: 'test-notification.wav'
+} as const;
 
 export class Appa implements Entity {
+  readonly uuid: UUID;
+  private app: PIXI.Application;
   private sprite: PIXI.Sprite;
-  private state: AppaState = {
-    audioPlaying: { roar: [], meow: [] },
-  };
+  private audioManager: AudioManager<AudioTypes>;
+  private state: AppaState = {};
 
-  constructor() {
+  constructor(app: PIXI.Application) {
+    this.uuid = crypto.randomUUID();
+    this.app = app;
+
+    this.audioManager = new AudioManager<AudioTypes>(audioTypeFileMap);
+
     this.sprite = PIXI.Sprite.from(SpriteFiles.appa);
     this.sprite.interactive = true;
+
     this.registerEvents();
   }
 
   registerEvents = (): void => {
-    this.sprite.on("pointerdown", () => {
+    this.sprite.on("pointerdown", async () => {
       store.dispatch(incrementClicks());
       this.meow();
     });
@@ -43,62 +51,44 @@ export class Appa implements Entity {
 
   getSprite = (): PIXI.Sprite => this.sprite;
 
+  /**
+   * Deep clone of Appa entity state.
+   *
+   * Note: Modifying value returned from this function will not modify entity state.
+   */
   getState = (): AppaState => cloneDeep(this.state);
 
-  roar = (): void => {
-    this.playAudio(AudioTypes.roar);
+  /**
+   * Movement
+   */
+
+  addToStage = (): void => {
+    this.app.stage.addChild(this.sprite);
   };
 
-  meow = (): void => {
-    this.playAudio(AudioTypes.meow, { noOverlap: false });
-  };
+  oscillate = (): void => {
+    const getX = (n: number): number => {
+      return this.app.renderer.width / 3 + Math.sin(n / 50) * 100;
+    };
 
-  pausePlayingAudio = (key: AudioTypes): void => {
-    this.state.audioPlaying[key].forEach((audio) => {
-      audio.pause();
-    });
-    this.state.audioPlaying.roar = [];
-  };
-
-  playAudio = (key: AudioTypes, { noOverlap = true } = {}): void => {
-    noOverlap && this.pausePlayingAudio(key);
-
-    const audio = this.makeAudio(key);
-    audio.addEventListener("canplaythrough", () => {
-      audio.play();
-      this.state.audioPlaying[key] = [...this.state.audioPlaying[key], audio];
-    });
-
-    audio.addEventListener("ended", () => {
-      this.state.audioPlaying[key] = this.state.audioPlaying[key].filter(
-        (a) => a !== audio
-      );
+    let elapsed = 0.0;
+    this.app.ticker.add((delta) => {
+      elapsed += delta;
+      this.sprite.x = getX(elapsed);
+      this.sprite.y = this.app.renderer.height / 3;
     });
   };
 
-  makeAudio = (key: AudioTypes): HTMLAudioElement => {
-    switch (key) {
-      case AudioTypes.roar: {
-        return new Audio(AudioFiles.roar);
-      }
-      case AudioTypes.meow: {
-        return new Audio(AudioFiles.meow);
-      }
-      default: {
-        return new Audio();
-      }
-    }
-  };
+  /**
+   * Audio
+   */
 
-  destroy = (app?: PIXI.Application): void => {
-    app?.stage.removeChild(this.sprite);
+  roar = () => this.audioManager.playAudio(AudioTypes.roar);
 
-    const audioKeys = Object.keys(this.state.audioPlaying);
-    audioKeys.forEach((key) => {
-      this.state.audioPlaying[key as AudioTypes].forEach((audio) => {
-        audio.pause();
-      });
-      this.state.audioPlaying[key as AudioTypes] = [];
-    });
+  meow = () => this.audioManager.playAudio(AudioTypes.meow);
+
+  destroy = (): void => {
+    this.app.stage.removeChild(this.sprite);
+    // this.audioManager.pauseAllAudio();
   };
 }

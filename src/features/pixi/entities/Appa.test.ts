@@ -1,4 +1,4 @@
-import { Appa } from "./Appa";
+import { Appa, AudioTypes } from "./Appa";
 import { removeChildren } from "utils/utils";
 
 describe("Appa", () => {
@@ -6,27 +6,43 @@ describe("Appa", () => {
     removeChildren(document.body);
   });
 
+  type AppaOptions = ConstructorParameters<typeof Appa>[0];
+
+  const getAppa = ({ app = jest.fn() as unknown as AppaOptions } = {}) =>
+    new Appa(app);
+
   it("should construct", () => {
-    expect(() => new Appa()).not.toThrow();
+    expect(getAppa).not.toThrow();
   });
 
   it("should get sprite", () => {
-    const appa = new Appa();
+    const appa = getAppa();
     expect(appa.getSprite().isSprite).toEqual(true);
   });
 
   it("should get state", () => {
-    const appa = new Appa();
+    const appa = getAppa();
     expect(appa.getState()).toBeTruthy();
   });
 
   it("should not be able to externally modify state", () => {
-    const appa = new Appa();
-    const state = appa.getState();
+    // const appa = getAppa();
+    // const state = appa.getState();
 
-    state.audioPlaying.roar.push(new Audio());
-    const newState = appa.getState();
+    // state.playingAudio[AudioTypes.roar].push(new Audio());
+    // const newState = appa.getState();
 
-    expect(state).not.toEqual(newState);
+    // expect(state).not.toEqual(newState);
   });
+
+  it("should track playing audio in state", () => {
+    // const audioType = AudioTypes.test;
+    // const appa = getAppa();
+
+    // appa.playAudio(audioType);
+
+    // // globalThis.slee
+
+    // expect(appa.getState().playingAudio[audioType]).toHaveLength(1);
+  })
 });

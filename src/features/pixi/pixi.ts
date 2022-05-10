@@ -15,7 +15,7 @@ type PixiEngineState = {
   entities: Entity[];
 };
 
-class PixiEngine<CanvasContainer extends HTMLElement> {
+export class PixiEngine<CanvasContainer extends HTMLElement> {
   private app: PIXI.Application;
   private defaultOptions: PixiOptions = { width: 800, height: 400 } as const;
   private container: CanvasContainer;
@@ -61,42 +61,28 @@ class PixiEngine<CanvasContainer extends HTMLElement> {
   };
 
   startGame = (): void => {
-    const appa = new Appa();
+    const appa = new Appa(this.app);
     this.addEntity(appa);
-    const sprite = appa.getSprite();
-
-    this.app.stage.addChild(sprite);
-
-    let elapsed = 0.0;
-    this.app.ticker.add((delta) => {
-      elapsed += delta;
-      sprite.x = this.xDelta(elapsed);
-      sprite.y = this.app.renderer.height / 3;
-    });
+    
+    appa.addToStage();
+    appa.oscillate();
+    appa.meow()
   };
 
   addEntity = (entity: PixiEngineState["entities"][number]): void => {
     this.state.entities = [...this.state.entities, entity];
   };
 
-  xDelta = (n: number): number => {
-    return this.app.renderer.width / 3 + Math.sin(n / 50) * 100;
+  destroyEntities = (): void => {
+    this.state.entities.forEach((entity) => {
+      entity.destroy();
+    });
+    this.state.entities = [];
   };
-
-  // yDelta = (n: number) => {
-  //   return this.app.renderer.height /
-  // }
 
   stopGame = (): void => {
     this.destroyEntities();
   }
-
-  destroyEntities = (): void => {
-    this.state.entities.forEach((entity) => {
-      entity.destroy(this.app);
-    });
-    this.state.entities = [];
-  };
 
   cleanup = (): void => {
     this.stopGame();
@@ -112,5 +98,3 @@ class PixiEngine<CanvasContainer extends HTMLElement> {
     this.container.removeChild(this.app.view);
   };
 }
-
-export { PixiEngine };
